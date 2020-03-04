@@ -82,7 +82,7 @@ class Client:
                                     msg, addr = m_sock.recvfrom(MAX_UDP_SIZE)
                                     if addr == self.client_addr:
                                         continue
-                                print(msg)
+                                print(msg.decode())
                 except ConnectionError:
                     self.conn.close()
 
