@@ -1,7 +1,10 @@
 import argparse
+import select
 import socket
 import threading
-from protocol import Connection, recv_udp, send_udp
+from protocol import Connection, MAX_UDP_SIZE, send_udp
+
+MULTICAST_ADDR = ('224.0.0.1', 8000)
 
 
 class Client:
@@ -25,12 +28,16 @@ class Client:
             try:
                 while True:
                     msg = input()
-                    if msg == 'U':
+
+                    if msg == 'U' or msg == 'M':
                         with open('ascii.txt', 'r') as ascii_art:
-                            msg = ascii_art.read()
-                            send_udp(msg, self.server_addr, self.client_addr)
-                    elif msg == 'M':
-                        pass  # TODO!
+                            content = ascii_art.read()
+
+                        if msg == 'U':
+                            addr = self.server_addr
+                        else:
+                            addr = MULTICAST_ADDR
+                        send_udp(content, addr, self.client_addr)
                     else:
                         self.conn.send_msg(msg)
             except KeyboardInterrupt:
@@ -47,12 +54,37 @@ class Client:
             self.conn.close()
 
     def receive_udp(self):
-        try:
-            while True:
-                msg = recv_udp(self.client_addr)
-                print(msg)
-        except ConnectionError:
-            self.conn.close()
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as u_sock:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as m_sock:
+                u_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                u_sock.bind(self.client_addr)
+
+                host = socket.gethostbyname(socket.gethostname())
+                m_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                m_sock.setsockopt(socket.SOL_IP, socket.IP_ADD_MEMBERSHIP,
+                                  socket.inet_aton(MULTICAST_ADDR[0]) + socket.inet_aton(host))
+                m_sock.bind(MULTICAST_ADDR)
+
+                ev_loop = select.epoll()
+                u_fd, m_fd = u_sock.fileno(), m_sock.fileno()
+                ev_loop.register(u_fd, select.EPOLLIN)
+                ev_loop.register(m_fd, select.EPOLLIN)
+
+                try:
+                    while True:
+                        events = ev_loop.poll()
+                        for file_no, event in events:
+                            if event | select.EPOLLIN:
+                                # TODO: received in parts??
+                                if file_no == u_fd:
+                                    msg = u_sock.recv(MAX_UDP_SIZE)
+                                else:
+                                    msg, addr = m_sock.recvfrom(MAX_UDP_SIZE)
+                                    if addr == self.client_addr:
+                                        continue
+                                print(msg)
+                except ConnectionError:
+                    self.conn.close()
 
 
 def parse_args():

@@ -4,7 +4,7 @@ import socket
 import threading
 from queue import Queue
 from threading import Lock
-from protocol import Connection, MAX_UDP_SIZE, recv_udp, send_udp
+from protocol import Connection, MAX_UDP_SIZE, send_udp
 
 logging.basicConfig(level='DEBUG')
 
@@ -31,20 +31,24 @@ class ClientHandler:
         return self.conn.addr
 
     def init(self):
-        self.conn.send_msg(self.LOGIN_MSG)
+        try:
+            self.conn.send_msg(self.LOGIN_MSG)
 
-        while True:
-            nickname = self.conn.recv_msg()
+            while True:
+                try:
+                    nickname = self.conn.recv_msg()
 
-            try:
-                self.server.register_client(nickname, self)
-                self.server.addr_client[self.addr] = self
+                    self.server.register_client(nickname, self)
+                    self.server.addr_client[self.addr] = self
 
-                self.nickname = nickname
-                self.conn.send_msg(self.HELLO_MSG.format(nickname))
-                break
-            except NickTakenError:
-                self.conn.send_msg(self.NICK_TAKEN_MSG.format(nickname))
+                    self.nickname = nickname
+                    self.conn.send_msg(self.HELLO_MSG.format(nickname))
+                    break
+                except NickTakenError:
+                    self.conn.send_msg(self.NICK_TAKEN_MSG.format(nickname))
+        except OSError:
+            print('fuck!')
+            self.shutdown()
 
         # Connection fully established.
         self.server.subscribe(self.nickname, 'default')
@@ -54,27 +58,35 @@ class ClientHandler:
     def shutdown(self):
         try:
             self.conn.send_msg(self.SHUTDOWN_MSG)
-        except ConnectionError:
-            pass
-        self.conn.close()
+            self.conn.close()
+        except OSError:
+            pass  # yeah, really
+
+        self.channel.unsub(self.nickname)
+        self.server.remove_client(self.nickname)
 
     def in_channel(self):
         receiver = threading.Thread(target=self.process_inbox, daemon=True)
         receiver.start()
 
-        while True:
-            msg = self.conn.recv_msg()
-            msg = '{}: {}'.format(self.nickname, msg)
-            self.channel.publish(('tcp', msg), self.nickname)
+        try:
+            while True:
+                msg = self.conn.recv_msg()
+                msg = '{}: {}'.format(self.nickname, msg)
+                self.channel.publish(('tcp', msg), self.nickname)
+        except ConnectionError:
+            self.shutdown()
 
     def process_inbox(self):
-        while True:
-            kin, msg = self.inbox.get()
-
-            if kin == 'udp':
-                send_udp(msg, self.addr)
-            else:
-                self.conn.send_msg(msg)
+        try:
+            while True:
+                kin, msg = self.inbox.get()
+                if kin == 'udp':
+                    send_udp(msg, self.addr)
+                else:
+                    self.conn.send_msg(msg)
+        except ConnectionError:
+            self.shutdown()
 
     def push(self, msg):
         self.inbox.put(msg)
@@ -93,7 +105,8 @@ class Channel:
         self.clients[name] = client
 
     def unsub(self, name):
-        del self.clients[name]
+        if name in self.clients:
+            del self.clients[name]
 
     def publish(self, msg, sender_name):
         with self.lock:
@@ -136,11 +149,10 @@ class SocketServer:
                 while True:
                     conn, addr = s.accept()
                     client = ClientHandler(conn, addr, self)
-
                     self.pool.submit(fn=client.init)
-                    logging.info('Client connection: {} {}'.format(*addr))
             except KeyboardInterrupt:
-                for c in self.clients.values():
+                clients = list(self.clients.values())
+                for c in clients:
                     c.shutdown()
                 self.pool.shutdown()
 
@@ -160,10 +172,13 @@ class SocketServer:
             if name in self.clients:
                 raise NickTakenError
             self.clients[name] = client
+        logging.info('Registered user: {}'.format(name))
 
     def remove_client(self, name):
         with self.cl_lock:
-            del self.clients[name]
+            if name in self.clients:
+                del self.clients[name]
+                logging.info('Unregistered user: {}'.format(name))
 
     def subscribe(self, name, channel):
         with self.ch_lock:

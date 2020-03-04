@@ -21,27 +21,32 @@ class Connection:
                 raise ConnectionError
         except OverflowError:
             raise MessageSizeError
+        except BrokenPipeError:
+            raise ConnectionError
 
     def recv_msg(self):
-        # Receive message length in bytes.
-        received = b''
-        while len(received) < LEN_BYTES:
-            recv = self.sock.recv(LEN_BYTES - len(received))
-            if not recv:
-                raise ConnectionError
-            received += recv
+        try:
+            # Receive message length in bytes.
+            received = b''
+            while len(received) < LEN_BYTES:
+                recv = self.sock.recv(LEN_BYTES - len(received))
+                if not recv:
+                    raise ConnectionError
+                received += recv
 
-        msg_len = int.from_bytes(received, BYTE_ORDER)
+            msg_len = int.from_bytes(received, BYTE_ORDER)
 
-        # Receive actual bytes of the message.
-        received = b''
-        while len(received) < msg_len:
-            recv = self.sock.recv(msg_len - len(received))
-            if not recv:
-                raise ConnectionError
-            received += recv
+            # Receive actual bytes of the message.
+            received = b''
+            while len(received) < msg_len:
+                recv = self.sock.recv(msg_len - len(received))
+                if not recv:
+                    raise ConnectionError
+                received += recv
 
-        return received.decode()
+            return received.decode()
+        except BrokenPipeError:
+            raise ConnectionError
 
     def close(self):
         self.sock.shutdown(socket.SHUT_RDWR)
@@ -51,13 +56,8 @@ class Connection:
 def send_udp(msg, dest_addr, source_addr=None):
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as u_sock:
         u_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
         if source_addr:
             u_sock.bind(source_addr)
+
         u_sock.sendto(msg.encode(), dest_addr)
-
-
-def recv_udp(addr):
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as u_sock:
-        u_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        u_sock.bind(addr)
-        return u_sock.recv(MAX_UDP_SIZE).decode()
