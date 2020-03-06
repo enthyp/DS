@@ -47,7 +47,6 @@ class ClientHandler:
                 except NickTakenError:
                     self.conn.send_msg(self.NICK_TAKEN_MSG.format(nickname))
         except OSError:
-            print('fuck!')
             self.shutdown()
 
         # Connection fully established.

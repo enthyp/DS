@@ -30,7 +30,7 @@ class Client:
                     msg = input()
 
                     if msg == 'U' or msg == 'M':
-                        with open('ascii.txt', 'r') as ascii_art:
+                        with open('ascii.txt', 'r', encoding='ascii') as ascii_art:
                             content = ascii_art.read()
 
                         if msg == 'U':
@@ -75,7 +75,6 @@ class Client:
                         events = ev_loop.poll()
                         for file_no, event in events:
                             if event | select.EPOLLIN:
-                                # TODO: received in parts??
                                 if file_no == u_fd:
                                     msg = u_sock.recv(MAX_UDP_SIZE)
                                 else:

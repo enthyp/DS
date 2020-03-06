@@ -2,7 +2,7 @@ import socket
 
 LEN_BYTES = 2
 BYTE_ORDER = 'big'
-MAX_UDP_SIZE = 4096
+MAX_UDP_SIZE = 8096
 
 
 class MessageSizeError(ConnectionError):
