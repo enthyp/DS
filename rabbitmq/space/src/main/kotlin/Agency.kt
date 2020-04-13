@@ -1,8 +1,6 @@
-import kotlinx.serialization.ImplicitReflectionSerializer
 import mediator.*
 import java.util.*
 
-@ImplicitReflectionSerializer
 class Agency(private val name: String, private val host: String) {
 
     fun run() {
@@ -41,7 +39,6 @@ class Agency(private val name: String, private val host: String) {
     }
 }
 
-@ImplicitReflectionSerializer
 fun main(argv: Array<String>) {
     val agency = Agency(argv[0], argv[1])
     agency.run()
