@@ -1,6 +1,7 @@
 import mediator.admin.AdminEndpoint
 import mediator.admin.AdminModeConnectionFactory
 import mediator.admin.NoticeTarget
+import mediator.core.Commission
 import mediator.core.Message
 import mediator.core.Notice
 

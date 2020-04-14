@@ -74,7 +74,7 @@ open class Message {
 @Serializable
 data class Commission(val from: String, val commissionId: String, val type: ServiceType) : Message() {
     override fun toString(): String {
-        return "$commissionId : $type"
+        return "${this::class.simpleName}: $from - $commissionId - $type"
     }
 }
 
@@ -82,13 +82,13 @@ data class Commission(val from: String, val commissionId: String, val type: Serv
 @Serializable
 data class Confirmation(val from: String, val commissionId: String) : Message() {
     override fun toString(): String {
-        return "$commissionId : CONFIRMED"
+        return "${this::class.simpleName}: $from - $commissionId"
     }
 }
 
 @Serializable
 data class Notice(val body: String) : Message() {
     override fun toString(): String {
-        return body
+        return "${this::class.simpleName}: $body"
     }
 }

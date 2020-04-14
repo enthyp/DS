@@ -38,13 +38,13 @@ class Agency(private val name: String, private val host: String) {
     private fun onMessage(msg: Message) {
         when(msg) {
             is Confirmation -> onConfirmation(msg)
-            is Notice -> println("Administration notice: $msg")
+            is Notice -> println("Administration: $msg")
             else -> println("Message type not handled: $msg")
         }
     }
 
     private fun onConfirmation(confirmation: Confirmation) {
-        println("${confirmation.from}: $confirmation")
+        println(confirmation)
     }
 }
 

@@ -25,13 +25,13 @@ class Provider(
     private fun onMessage(msg: Message) : Confirmation? {
         return when (msg) {
             is Commission -> onCommission(msg)
-            is Notice -> { println("Administration notice: $msg"); return null }
-            else -> { println("Message type not handled: $msg"); return null }
+            is Notice -> { println("Administration: $msg"); return null }
+            else -> { println("Message not handled: $msg"); return null }
         }
     }
 
     private fun onCommission(commission: Commission): Confirmation {
-        println("Got some work to do from ${commission.from}: $commission")
+        println(commission)
         return Confirmation(name, commission.commissionId)
     }
 }
