@@ -1,11 +1,20 @@
-import mediator.*
+import mediator.admin.AdminModeConnectionFactory
+import mediator.core.*
 import java.util.*
 
 class Agency(private val name: String, private val host: String) {
 
+    private val connectionFactory: EndpointConnectionFactory = AdminModeConnectionFactory()
+        .setHost(host)
+        .setClientMode()
+        .setOnRecvCallback { msg -> onMessage(msg) }
+
     fun run() {
-        ClientEndpoint(host).use { endpoint ->
+        val connection = connectionFactory.newInstance()
+
+        ClientEndpoint(connection).use { endpoint ->
             val inputLines = generateSequence { readLine() }
+            println("Running...")
 
             inputLines.forEach { line ->
                 val serviceType: ServiceType? = when (line) {
@@ -29,7 +38,7 @@ class Agency(private val name: String, private val host: String) {
     private fun onMessage(msg: Message) {
         when(msg) {
             is Confirmation -> onConfirmation(msg)
-            is Notice -> println("Administration notice: ${msg.body}")
+            is Notice -> println("Administration notice: $msg")
             else -> println("Message type not handled: $msg")
         }
     }

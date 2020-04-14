@@ -1,4 +1,5 @@
-import mediator.*
+import mediator.admin.AdminModeConnectionFactory
+import mediator.core.*
 
 class Provider(
     private val name: String,
@@ -7,8 +8,16 @@ class Provider(
     private val s2: ServiceType
 ) {
 
+    private val connectionFactory: EndpointConnectionFactory = AdminModeConnectionFactory()
+        .setHost(host)
+        .setContractorMode()
+        .setOnRecvCallback { msg -> onMessage(msg) }
+
     fun run() {
-        ContractorEndpoint(host).use { endpoint ->
+        val connection = connectionFactory.newInstance()
+
+        ContractorEndpoint(connection).use { endpoint ->
+            println("Running...")
             endpoint.register(s1, s2) { msg -> onMessage(msg) }
         }
     }
@@ -16,7 +25,7 @@ class Provider(
     private fun onMessage(msg: Message) : Confirmation? {
         return when (msg) {
             is Commission -> onCommission(msg)
-            is Notice -> { println("Administration notice: ${msg.body}"); return null }
+            is Notice -> { println("Administration notice: $msg"); return null }
             else -> { println("Message type not handled: $msg"); return null }
         }
     }

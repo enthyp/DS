@@ -1,4 +1,4 @@
-package mediator
+package mediator.core
 
 import kotlinx.serialization.*
 import kotlinx.serialization.internal.StringDescriptor
@@ -59,9 +59,12 @@ open class Message {
             val body = bytes.sliceArray(1 until bytes.size).toString(charset("UTF-8"))
 
             return when (code) {
-                0.toByte() -> json.fromJson(Commission.serializer(), json.parseJson(body))
-                1.toByte() -> json.fromJson(Confirmation.serializer(), json.parseJson(body))
-                2.toByte() -> json.fromJson(Notice.serializer(), json.parseJson(body))
+                0.toByte() -> json.fromJson(
+                    Commission.serializer(), json.parseJson(body))
+                1.toByte() -> json.fromJson(
+                    Confirmation.serializer(), json.parseJson(body))
+                2.toByte() -> json.fromJson(
+                    Notice.serializer(), json.parseJson(body))
                 else -> throw IndexOutOfBoundsException()
             }
         }
