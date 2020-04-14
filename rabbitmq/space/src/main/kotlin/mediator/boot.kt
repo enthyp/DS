@@ -6,7 +6,6 @@ import mediator.core.EndpointConnection
 import mediator.core.ServiceType
 
 const val MAIN_EXCHANGE = "main"
-const val QUEUE_TTL = 60000         // 60s
 
 typealias PluginBootRunner = (EndpointConnection) -> List<String>
 

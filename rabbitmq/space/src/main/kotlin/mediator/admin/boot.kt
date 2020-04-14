@@ -2,7 +2,6 @@ package mediator.admin
 
 import com.rabbitmq.client.Channel
 import mediator.MAIN_EXCHANGE
-import mediator.QUEUE_TTL
 import mediator.core.EndpointConnection
 
 const val NOTICE_EXCHANGE = "notice"
@@ -28,7 +27,7 @@ fun adminInit(conn: EndpointConnection): List<String> {
     channel.queueBind(CLIENT_NOTICE_QUEUE, NOTICE_EXCHANGE, ALL_KEY)
 
     // And another for contractor notifications.
-    channel.queueDeclare(CONTRACTOR_NOTICE_QUEUE, false, false, true, mapOf("x-expires" to QUEUE_TTL))
+    channel.queueDeclare(CONTRACTOR_NOTICE_QUEUE, false, false, false, null)
     channel.queueBind(CONTRACTOR_NOTICE_QUEUE, NOTICE_EXCHANGE, CONTRACTOR_KEY)
     channel.queueBind(CONTRACTOR_NOTICE_QUEUE, NOTICE_EXCHANGE, ALL_KEY)
 
