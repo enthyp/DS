@@ -44,7 +44,7 @@ class Agency(private val name: String, private val host: String) {
     }
 
     private fun onConfirmation(confirmation: Confirmation) {
-        println("Task executed by ${confirmation.from}: $confirmation")
+        println("${confirmation.from}: $confirmation")
     }
 }
 

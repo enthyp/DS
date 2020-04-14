@@ -6,7 +6,6 @@ import mediator.core.EndpointConnection
 import mediator.core.ServiceType
 
 const val MAIN_EXCHANGE = "main"
-const val RPC_REPLY_KEY = "rpc"     // to bind reply queues to main exchange
 const val QUEUE_TTL = 60000         // 60s
 
 typealias PluginBootRunner = (EndpointConnection) -> List<String>
@@ -25,7 +24,7 @@ class Queues(private val conn: EndpointConnection) : AutoCloseable {
 
     override fun close() {
         val channel = conn.createChannel()
-        queues.forEach { q -> channel.queueDelete(q); println("Delete $q") }
+        queues.forEach { q -> channel.queueDelete(q) }
     }
 }
 

@@ -82,7 +82,7 @@ data class Commission(val from: String, val commissionId: String, val type: Serv
 @Serializable
 data class Confirmation(val from: String, val commissionId: String) : Message() {
     override fun toString(): String {
-        return commissionId
+        return "$commissionId : CONFIRMED"
     }
 }
 

@@ -22,9 +22,10 @@ open class ReceivingEndpointConnection(
         val deliverCallback = DeliverCallback { _, message ->
             val msg = Message.decode(message.body)
             recvCallback(msg)
+            recvChannel.basicAck(message.envelope.deliveryTag, false)
         }
 
-        recvChannel.basicConsume(recvQueue, deliverCallback, CancelCallback {})
+        recvChannel.basicConsume(recvQueue, false, deliverCallback, CancelCallback {})
     }
 }
 

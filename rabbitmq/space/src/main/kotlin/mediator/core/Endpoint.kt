@@ -2,7 +2,6 @@ package mediator.core
 
 import com.rabbitmq.client.*
 import mediator.MAIN_EXCHANGE
-import mediator.RPC_REPLY_KEY
 import java.io.Closeable
 import java.util.*
 
@@ -30,10 +29,12 @@ class ClientEndpoint(connection: EndpointConnection) : BaseEndpoint(connection) 
                     callbacks.remove(msgId)
                 }
             }
+
+            channel.basicAck(message.envelope.deliveryTag, false)
         }
 
         channel.queueDeclare(replyQueue, false, false, true, null)
-        channel.queueBind(replyQueue, MAIN_EXCHANGE, RPC_REPLY_KEY)
+        channel.queueBind(replyQueue, MAIN_EXCHANGE, replyQueue)
         channel.basicConsume(replyQueue, false, deliverCallback, CancelCallback {})
     }
 
