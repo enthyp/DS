@@ -1,4 +1,4 @@
-import mediator.admin.AdminModeConnectionFactory
+import mediator.admin.ReceiverEndpointBuilder
 import mediator.core.*
 
 class Provider(
@@ -7,16 +7,14 @@ class Provider(
     private val s1: ServiceType,
     private val s2: ServiceType
 ) {
-
-    private val connectionFactory: EndpointConnectionFactory = AdminModeConnectionFactory()
-        .setHost(host)
-        .setContractorMode()
-        .setOnRecvCallback { msg -> onMessage(msg) }
-
     fun run() {
-        val connection = connectionFactory.newInstance()
+        val endpointBuilder = ReceiverEndpointBuilder()
+            .setHost(host)
+            .setOnReceived { msg -> onMessage(msg) }
 
-        ContractorEndpoint(connection).use { endpoint ->
+        val contractorEndpoint = endpointBuilder.newContractorInstance()
+
+        contractorEndpoint.use { endpoint ->
             println("Running...")
             endpoint.register(s1, s2) { msg -> onMessage(msg) }
         }

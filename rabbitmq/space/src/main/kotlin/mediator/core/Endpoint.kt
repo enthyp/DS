@@ -5,13 +5,22 @@ import mediator.MAIN_EXCHANGE
 import java.io.Closeable
 import java.util.*
 
-open class BaseEndpoint(private val connection: EndpointConnection) : Closeable {
+open class BaseEndpoint(host: String) : Closeable {
+
+    protected val connection: Connection
+
+    init {
+        val connFactory = ConnectionFactory()
+        connFactory.host = host
+        connection = connFactory.newConnection()
+    }
+
     override fun close() {
         connection.close()
     }
 }
 
-class ClientEndpoint(connection: EndpointConnection) : BaseEndpoint(connection) {
+open class ClientEndpoint(host: String) : BaseEndpoint(host) {
 
     private val channel: Channel = connection.createChannel()
     private val callbacks: MutableMap<String, (Message) -> Unit> = mutableMapOf()
@@ -54,7 +63,7 @@ class ClientEndpoint(connection: EndpointConnection) : BaseEndpoint(connection) 
     }
 }
 
-class ContractorEndpoint(connection: EndpointConnection) : BaseEndpoint(connection) {
+open class ContractorEndpoint(host: String) : BaseEndpoint(host) {
 
     private val channels = List(2) { _ -> connection.createChannel() }
 
@@ -96,5 +105,25 @@ class ContractorEndpoint(connection: EndpointConnection) : BaseEndpoint(connecti
                 (this as Object).wait()
             }
         }
+    }
+}
+
+open class SimpleEndpointBuilder {
+
+    protected lateinit var host: String
+    protected val connFactory = ConnectionFactory()
+
+    open fun setHost(host: String): SimpleEndpointBuilder {
+        this.host = host
+        this.connFactory.host = host
+        return this
+    }
+
+    open fun newClientInstance(): ClientEndpoint {
+        return ClientEndpoint(host)
+    }
+
+    open fun newContractorInstance(): ContractorEndpoint {
+        return ContractorEndpoint(host)
     }
 }

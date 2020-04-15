@@ -1,20 +1,17 @@
-import mediator.admin.AdminEndpoint
-import mediator.admin.AdminModeConnectionFactory
 import mediator.admin.NoticeTarget
-import mediator.core.Commission
+import mediator.admin.ReceiverEndpointBuilder
 import mediator.core.Message
 import mediator.core.Notice
 
 class AdminConsole(private val host: String) {
-    private val connectionFactory = AdminModeConnectionFactory()
-        .setHost(host)
-        .setAdminMode()
-        .setOnRecvCallback { msg -> onLogReceived(msg) }
-
     fun run() {
-        val connection = connectionFactory.newInstance()
+        val endpointBuilder = ReceiverEndpointBuilder()
+            .setHost(host)
+            .setOnReceived { msg -> onLogReceived(msg) }
 
-        AdminEndpoint(connection).use { endpoint ->
+        val adminEndpoint = endpointBuilder.newAdminInstance()
+
+        adminEndpoint.use { endpoint ->
             val inputLines = generateSequence { readLine() }
             println("Running...")
 

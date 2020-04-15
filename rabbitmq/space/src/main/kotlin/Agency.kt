@@ -1,18 +1,17 @@
-import mediator.admin.AdminModeConnectionFactory
+import mediator.admin.ReceiverEndpointBuilder
 import mediator.core.*
 import java.util.*
 
 class Agency(private val name: String, private val host: String) {
 
-    private val connectionFactory: EndpointConnectionFactory = AdminModeConnectionFactory()
-        .setHost(host)
-        .setClientMode()
-        .setOnRecvCallback { msg -> onMessage(msg) }
-
     fun run() {
-        val connection = connectionFactory.newInstance()
+        val endpointBuilder = ReceiverEndpointBuilder()
+            .setHost(host)
+            .setOnReceived { msg -> onMessage(msg) }
 
-        ClientEndpoint(connection).use { endpoint ->
+        val clientEndpoint = endpointBuilder.newClientInstance()
+
+        clientEndpoint.use { endpoint ->
             val inputLines = generateSequence { readLine() }
             println("Running...")
 
