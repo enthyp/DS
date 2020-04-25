@@ -8,6 +8,8 @@ class Agency(private val name: String, private val host: String) {
         val endpointBuilder = ReceiverEndpointBuilder()
             .setHost(host)
             .setOnReceived { msg -> onMessage(msg) }
+//        val endpointBuilder = SimpleEndpointBuilder()
+//            .setHost(host)
 
         val clientEndpoint = endpointBuilder.newClientInstance()
 

@@ -11,6 +11,8 @@ class Provider(
         val endpointBuilder = ReceiverEndpointBuilder()
             .setHost(host)
             .setOnReceived { msg -> onMessage(msg) }
+//        val endpointBuilder = ReceiverEndpointBuilder()
+//            .setHost(host)
 
         val contractorEndpoint = endpointBuilder.newContractorInstance()
 

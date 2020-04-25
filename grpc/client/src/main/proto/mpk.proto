@@ -1,0 +1,50 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+
+
+service MpkPublisher {
+    rpc GetSchedule(google.protobuf.Empty) returns (Schedule);
+    rpc Subscribe(NotifyRequest) returns (stream NotifyResponse);
+}
+
+// City transport network description
+message StopInfo {
+    int32 id = 1;
+    string name = 2;
+}
+
+message LineInfo {
+    uint32 number = 1;
+    string direction_0 = 2;
+    string direction_1 = 3;
+    repeated StopInfo stops = 4;
+
+    enum VehicleType {
+        A = 0;
+        T = 1;
+    }
+
+    VehicleType type = 5;
+}
+
+message Schedule {
+    repeated LineInfo lines = 1;
+}
+
+
+// Client-server communication
+message Line {
+    uint32 number = 1;
+    bool direction = 2;
+}
+
+message NotifyRequest {
+    int32 client_id = 1;
+    int32 stop_id = 2;
+    repeated Line lines = 3;
+    uint32 minutes_ahead = 4;
+}
+
+message NotifyResponse {
+    repeated Line lines = 1;
+}
