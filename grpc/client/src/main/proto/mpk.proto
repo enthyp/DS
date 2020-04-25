@@ -43,6 +43,7 @@ message NotifyRequest {
     int32 stop_id = 2;
     repeated Line lines = 3;
     uint32 minutes_ahead = 4;
+    uint32 duration = 5;
 }
 
 message NotifyResponse {

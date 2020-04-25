@@ -4,7 +4,7 @@ from concurrent import futures
 from gen import mpk_pb2, mpk_pb2_grpc
 from provider import MpkProvider, MsgType
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 
 class MpkPublisher(mpk_pb2_grpc.MpkPublisherServicer):
@@ -21,7 +21,7 @@ class MpkPublisher(mpk_pb2_grpc.MpkPublisherServicer):
 
     def Subscribe(self, request, context):
         logging.info(f'Subscribe received: {request}')
-        result_queue = self.provider.observe(request.stop_id, request.lines)
+        result_queue = self.provider.observe(request.stop_id, request.duration, request.lines)
 
         while True:
             result = result_queue.get()
@@ -38,10 +38,22 @@ class MpkPublisher(mpk_pb2_grpc.MpkPublisherServicer):
                 break
         logging.info('Closing stream.')
 
+        # IMPORTANT:
+        # https://stackoverflow.com/questions/43948975/grpc-unary-streaming-continues-after-disconnect-blocks-on-interrupt
+        # Serious bug in Python grpcio - server doesn't notice client forceful disconnect - threads leak...
+
 
 def serve():
     executor = futures.ThreadPoolExecutor(max_workers=10)
-    server = grpc.server(executor)
+    server = grpc.server(
+        executor,
+        options=(
+            ('grpc.keepalive_time_ms', 5000),
+            # send keepalive ping every 5 sec, default is 2 hours
+            ('grpc.keepalive_timeout_ms', 1000),
+            # # keepalive ping time out after 1 sec, default is 20 sec
+        )
+    )
     mpk_provider = MpkProvider(executor)
     mpk_publisher = MpkPublisher(mpk_provider)
 

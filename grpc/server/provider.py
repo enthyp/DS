@@ -67,37 +67,42 @@ class MpkProvider:
     def get_lines():
         return lines_info
 
-    def observe(self, stop, lines):
+    def observe(self, stop, duration, lines):
         result_queue = Queue(maxsize=10)
-        self.executor.submit(self._observe, stop, lines, result_queue)
+        self.executor.submit(self._observe, stop, duration, lines, result_queue)
         return result_queue
 
     @staticmethod
-    def _observe(stop, lines, queue):
-        n_observations = rnd.randint(1, 10)  # normally would be time limited or sth
+    def _observe(stop, duration, lines, queue):
         available_lines = stop2lines.get(stop, None)
 
         # Handle erroneous requests.
         if not available_lines:
             msg = ProviderMsg(type=MsgType.BAD_REQUEST, content='Invalid stop ID.')
-            queue.put(msg)
+            queue.put_nowait(msg)
             return
 
         common_lines = [line for line in lines if line.number in available_lines]
         if not common_lines:
             msg = ProviderMsg(type=MsgType.BAD_REQUEST, content='Invalid lines for given stop.')
-            queue.put(msg)
+            queue.put_nowait(msg)
             return
 
         # Get observations for correct requests.
-        for _ in range(n_observations):
+        # duration would normally be a time interval
+        for i in range(duration):
+            logging.info(i)
             n_observed = rnd.randint(1, len(common_lines))
             observed = rnd.sample(common_lines, k=n_observed)
             msg = ProviderMsg(type=MsgType.OK, content=observed)
-            queue.put(msg)
+            try:
+                queue.put_nowait(msg)
+            except queue.Full:
+                logging.info('Server too slow, skipping...')
 
             logging.info(f'Observed vehicles of: {observed}')
             time.sleep(rnd.randint(1, 2))
+
         msg = ProviderMsg(type=MsgType.FINISHED, content=None)
         queue.put(msg)
 
