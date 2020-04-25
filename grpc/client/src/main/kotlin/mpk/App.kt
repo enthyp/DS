@@ -42,6 +42,8 @@ class MpkClient constructor(
             stub.subscribe(request).collect { response ->
                 println("OBSERVED: $response")
             }
+
+            println("STREAM ENDED")
         } catch (e: StatusException) {
             onCommunicationError(e.message)
         }

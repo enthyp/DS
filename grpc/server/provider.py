@@ -96,7 +96,9 @@ class MpkProvider:
             msg = ProviderMsg(type=MsgType.OK, content=observed)
             queue.put(msg)
 
-            logging.info(f'Observed {observed}')
+            logging.info(f'Observed vehicles of: {observed}')
             time.sleep(rnd.randint(1, 2))
         msg = ProviderMsg(type=MsgType.FINISHED, content=None)
         queue.put(msg)
+
+        logging.info('Provider done.')

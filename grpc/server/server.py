@@ -12,6 +12,7 @@ class MpkPublisher(mpk_pb2_grpc.MpkPublisherServicer):
         self.provider = mpk_provider
 
     def GetSchedule(self, request, context):
+        logging.info(f'GetSchedule received.')
         response = mpk_pb2.Schedule()
         lines = self.provider.get_lines()
         response.lines.extend(lines)
@@ -19,6 +20,7 @@ class MpkPublisher(mpk_pb2_grpc.MpkPublisherServicer):
         return response
 
     def Subscribe(self, request, context):
+        logging.info(f'Subscribe received: {request}')
         result_queue = self.provider.observe(request.stop_id, request.lines)
 
         while True:
@@ -32,18 +34,9 @@ class MpkPublisher(mpk_pb2_grpc.MpkPublisherServicer):
                 msg = result.content
                 context.set_details(msg)
                 context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-                return mpk_pb2.NotifyResponse()
-
-
-def gtfs():
-    from google.transit import gtfs_realtime_pb2
-    from pprint import pprint
-
-    feed = gtfs_realtime_pb2.FeedMessage()
-    with open('VehiclePositions_A.pb', 'rb') as v_file:
-        content = v_file.read()
-    feed.ParseFromString(content)
-    pprint(feed.entity)
+                yield mpk_pb2.NotifyResponse()
+                break
+        logging.info('Closing stream.')
 
 
 def serve():
@@ -53,7 +46,7 @@ def serve():
     mpk_publisher = MpkPublisher(mpk_provider)
 
     mpk_pb2_grpc.add_MpkPublisherServicer_to_server(mpk_publisher, server)
-    server.add_insecure_port('[::]:50051')
+    server.add_insecure_port('localhost:50051')
     server.start()
 
     logging.info('Server is running...')
