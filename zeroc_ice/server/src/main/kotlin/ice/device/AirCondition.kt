@@ -7,7 +7,7 @@ import SmartHome.AirCondition.Property
 import SmartHome.RuntimeError
 import com.zeroc.Ice.Current
 
-open class AirConditionI : AirConditioner {
+open class AirConditionerI : AirConditioner {
 
     companion object {
         const val TEMP_MIN = 15.0
@@ -59,7 +59,7 @@ open class AirConditionI : AirConditioner {
     }
 }
 
-class HumidityAirConditionI : HumidityAirConditioner, AirConditionI() {
+class HumidityAirConditionerI : HumidityAirConditioner, AirConditionerI() {
     companion object {
         const val HUMIDITY_MIN = 0.0
         const val HUMIDITY_MAX = 1.0
