@@ -4,87 +4,47 @@ import SmartHome.AirCondition.AirConditioner
 import SmartHome.AirCondition.Configuration
 import SmartHome.AirCondition.HumidityAirConditioner
 import SmartHome.AirCondition.Property
-import SmartHome.RuntimeError
+import SmartHome.BaseError
+import SmartHome.ValueError
 import com.zeroc.Ice.Current
 
-open class AirConditionerI : AirConditioner {
-
-    companion object {
-        const val TEMP_MIN = 15.0
-        const val TEMP_MAX = 30.0
-        const val POWER_MIN = 0.0
-        const val POWER_MAX = 1.0
+fun validate(property: Property, value: Float) {
+    when (property) {
+        Property.TEMPERATURE ->
+            if (value !in 15.0f..30.0f) throw ValueError("Value out of range!", 15.0f, 30.0f)
+        Property.POWER ->
+            if (value !in 0.0f..100.0f) throw ValueError("Value out of range!", 0.0f, 100.0f)
+        Property.HUMIDITY ->
+            if (value !in 0.0f..100.0f) throw ValueError("Value out of range!", 0.0f, 100.0f)
     }
+}
 
-    protected var temperature: Float? = null
-    protected var power: Float? = null
-    protected var isOn = false
+open class AirConditionerI(name: String) : AirConditioner, BaseDeviceI(name) {
 
-    override fun on(current: Current?) {
-        isOn = true
-    }
-
-    override fun off(current: Current?) {
-        isOn = false
-    }
+    protected val props = mutableMapOf<Property, Float>(
+        Property.TEMPERATURE to 21.0f,
+        Property.POWER to 0.0f
+    )
 
     override fun setConfig(config: Configuration, current: Current?) {
-        // Validate temperature
-        val temperature = config.props[Property.TEMPERATURE]
-        temperature?.let { t ->
-            if (t in TEMP_MIN..TEMP_MAX) {
-                this.temperature = t
+        // Validate and set properties
+        for ((prop, value) in config.props) {
+            if (prop in props) {
+                validate(prop, value)
+                props[prop] = value
             } else {
-                throw RuntimeError()
-            }
-        }
-
-        // Validate power
-        val power = config.props[Property.POWER]
-        power?.let { p ->
-            if (p in POWER_MIN..POWER_MAX) {
-                this.power = p
-            } else {
-                throw RuntimeError()
+                throw BaseError("Invalid configuration property: $prop")
             }
         }
     }
 
     override fun getConfig(current: Current?): Configuration {
-        val props = mutableMapOf<Property, Float?>()
-        temperature?.let { props[Property.TEMPERATURE] = temperature }
-        power?.let { props[Property.POWER] = power }
-
         return Configuration(props)
     }
 }
 
-class HumidityAirConditionerI : HumidityAirConditioner, AirConditionerI() {
-    companion object {
-        const val HUMIDITY_MIN = 0.0
-        const val HUMIDITY_MAX = 1.0
-    }
-
-    protected var humidity: Float? = null
-
-    override fun setConfig(config: Configuration, current: Current?) {
-        super.setConfig(config, current)
-
-        // Validate humidity
-        val humidity = config.props[Property.HUMIDITY]
-        humidity?.let { h ->
-            if (h in HUMIDITY_MIN..HUMIDITY_MAX) {
-                this.humidity = h
-            } else {
-                throw RuntimeError()
-            }
-        }
-    }
-
-    override fun getConfig(current: Current?): Configuration {
-        val config = super.getConfig(current)
-        humidity?.let { config.props[Property.HUMIDITY] = humidity }
-
-        return config
+class HumidityAirConditionerI(name: String) : HumidityAirConditioner, AirConditionerI(name) {
+    init {
+        this.props[Property.HUMIDITY] = 100.0f
     }
 }

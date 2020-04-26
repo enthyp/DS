@@ -4,7 +4,8 @@ module SmartHome {
     
     module Temperature {
 
-        interface Thermometer {
+        interface Thermostat extends BaseDevice {
+            void setTemperature(float temperature) throws BaseError;
             float getTemperature();
         }
     }

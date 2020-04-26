@@ -10,22 +10,22 @@ with Ice.initialize(sys.argv) as communicator:
     obj_hac = communicator.stringToProxy('hac/basement:default -p 10000')
 
     info = SmartHome.InfoPrx.checkedCast(obj_info)
-    t1 = SmartHome.Temperature.ThermometerPrx.checkedCast(obj_t1)
-    t2 = SmartHome.Temperature.ThermometerPrx.checkedCast(obj_t2)
+    t1 = SmartHome.Temperature.ThermostatPrx.checkedCast(obj_t1)
+    t2 = SmartHome.Temperature.ThermostatPrx.checkedCast(obj_t2)
     ac = SmartHome.AirCondition.AirConditionerPrx.checkedCast(obj_ac)
     hac = SmartHome.AirCondition.HumidityAirConditionerPrx.checkedCast(obj_hac)
 
     print(info.getDevices())
     print(t1.getTemperature())
+    t1.turnOn()
+    t1.setTemperature(20)
+    print(t1.getTemperature())
     print(t2.getTemperature())
-    ac.on()
-    hac.off()
-
-
+    ac.turnOn()
+    hac.turnOff()
 
     print(ac.getConfig())
     props = {
-        SmartHome.AirCondition.Property.TEMPERATURE: 20
     }
     ac.setConfig(SmartHome.AirCondition.Configuration(props))
     print(ac.getConfig())

@@ -1,16 +1,27 @@
 [["python:pkgdir:SmartHome"]]
 module SmartHome {
 
-    exception Error {
+    // Generic data and operations
+    enum DeviceState { ON, OFF }
+    class DeviceConfiguration {}
+
+    interface BaseDevice {
+        idempotent string name();
+        idempotent void turnOn();
+        idempotent void turnOff();
+        idempotent DeviceState state();
+    }
+
+    exception BaseError {
         string reason;
     }
 
-    exception LogicError extends Error {}
+    exception ValueError extends BaseError {
+        float from;
+        float to;
+    }
 
-    exception RuntimeError extends Error {}
-
-    class DeviceConfiguration {}
-
+    // Info about all available devices
     sequence<string> DeviceList;
     dictionary<string, DeviceList> Devices;
 

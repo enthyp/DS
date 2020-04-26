@@ -3,11 +3,12 @@
 module SmartHome {
 
     module AirCondition {
+
+        // Air conditioner configuration
         enum Property {
             TEMPERATURE,
             POWER,
-            HUMIDITY,
-            DIRECTION
+            HUMIDITY
         }
 
         dictionary<Property, float> Properties;
@@ -16,19 +17,13 @@ module SmartHome {
             Properties props;
         }
 
-        // TODO: errors for incorrect values + operation when deactivated
         // Ordinary air conditioner
-        interface AirConditioner {
-            idempotent void on() throws RuntimeError;
-            idempotent void off() throws RuntimeError;
+        interface AirConditioner extends BaseDevice {
             idempotent Configuration getConfig();
-            idempotent void setConfig(Configuration config) throws RuntimeError;
+            idempotent void setConfig(Configuration config) throws BaseError;
         }
 
         // Air conditioner with humidity regulation
         interface HumidityAirConditioner extends AirConditioner {}
-
-        // Air conditioner with adjustable airflow direction
-        interface DirectableAirConditioner extends AirConditioner {}
     }
 }

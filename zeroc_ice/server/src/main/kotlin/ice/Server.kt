@@ -4,10 +4,10 @@ import com.zeroc.Ice.Util
 import ice.device.AirConditionerI
 import ice.device.HumidityAirConditionerI
 import ice.device.InfoI
-import ice.device.ThermometerI
+import ice.device.ThermostatI
 
 val devices = mutableMapOf(
-    "thermometers" to arrayOf("kitchen", "bathroom"),
+    "thermostats" to arrayOf("kitchen", "bathroom"),
     "airConditioners" to arrayOf("kitchen"),
     "humidityAirConditioners" to arrayOf("bathroom", "basement")
 )
@@ -19,9 +19,9 @@ fun main(argv: Array<String>) {
         val info = InfoI(devices)
         adapter.add(info, Util.stringToIdentity("info"))
 
-        val tempLocator = Locator(devices["thermometers"]!!) { ThermometerI() }
-        val acLocator = Locator(devices["airConditioners"]!!) { AirConditionerI() }
-        val hacLocator = Locator(devices["humidityAirConditioners"]!!) { HumidityAirConditionerI() }
+        val tempLocator = Locator(devices["thermostats"]!!) { name -> ThermostatI(name) }
+        val acLocator = Locator(devices["airConditioners"]!!) { name -> AirConditionerI(name) }
+        val hacLocator = Locator(devices["humidityAirConditioners"]!!) { name -> HumidityAirConditionerI(name) }
 
         adapter.addServantLocator(tempLocator, "temp")
         adapter.addServantLocator(acLocator, "ac")
