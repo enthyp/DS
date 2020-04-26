@@ -1,5 +1,6 @@
 import logging
 import random as rnd
+import threading
 import time
 from enum import Enum
 from queue import Queue
@@ -47,7 +48,7 @@ stop2lines = {
 
 
 # Server - provider communication
-class ProviderMsg:
+class ProviderResponse:
     def __init__(self, type, content):
         self.type = type
         self.content = content
@@ -59,6 +60,20 @@ class MsgType(Enum):
     BAD_REQUEST = 2
 
 
+class Task:
+    def __init__(self, event, future, result_queue):
+        self.event = event
+        self.future = future
+        self.queue = result_queue
+
+    def get(self):
+        return self.queue.get()
+
+    def cancel(self):
+        self.future.cancel()
+        self.event.set()
+
+
 class MpkProvider:
     def __init__(self, executor):
         self.executor = executor
@@ -67,34 +82,38 @@ class MpkProvider:
     def get_lines():
         return lines_info
 
-    def observe(self, stop, duration, lines):
+    def observe(self, request):
         result_queue = Queue(maxsize=10)
-        self.executor.submit(self._observe, stop, duration, lines, result_queue)
-        return result_queue
+        event = threading.Event()
+        future = self.executor.submit(self._observe, request, event, result_queue)
+        return Task(event, future, result_queue)
 
     @staticmethod
-    def _observe(stop, duration, lines, queue):
-        available_lines = stop2lines.get(stop, None)
+    def _observe(request, event, queue):
+        available_lines = stop2lines.get(request.stop_id, None)
 
         # Handle erroneous requests.
         if not available_lines:
-            msg = ProviderMsg(type=MsgType.BAD_REQUEST, content='Invalid stop ID.')
+            msg = ProviderResponse(type=MsgType.BAD_REQUEST, content='Invalid stop ID.')
             queue.put_nowait(msg)
             return
 
-        common_lines = [line for line in lines if line.number in available_lines]
+        common_lines = [line for line in request.lines if line.number in available_lines]
         if not common_lines:
-            msg = ProviderMsg(type=MsgType.BAD_REQUEST, content='Invalid lines for given stop.')
+            msg = ProviderResponse(type=MsgType.BAD_REQUEST, content='Invalid lines for given stop.')
             queue.put_nowait(msg)
             return
 
         # Get observations for correct requests.
-        # duration would normally be a time interval
-        for i in range(duration):
-            logging.info(i)
+        # Note: duration would normally be a time interval
+        for _ in range(request.duration):
+            # Exit early if communication breaks down.
+            if event.is_set():
+                break
+
             n_observed = rnd.randint(1, len(common_lines))
             observed = rnd.sample(common_lines, k=n_observed)
-            msg = ProviderMsg(type=MsgType.OK, content=observed)
+            msg = ProviderResponse(type=MsgType.OK, content=observed)
             try:
                 queue.put_nowait(msg)
             except queue.Full:
@@ -103,7 +122,7 @@ class MpkProvider:
             logging.info(f'Observed vehicles of: {observed}')
             time.sleep(rnd.randint(1, 2))
 
-        msg = ProviderMsg(type=MsgType.FINISHED, content=None)
+        msg = ProviderResponse(type=MsgType.FINISHED, content=None)
         queue.put(msg)
 
         logging.info('Provider done.')

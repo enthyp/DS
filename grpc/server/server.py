@@ -21,26 +21,25 @@ class MpkPublisher(mpk_pb2_grpc.MpkPublisherServicer):
 
     def Subscribe(self, request, context):
         logging.info(f'Subscribe received: {request}')
-        result_queue = self.provider.observe(request.stop_id, request.duration, request.lines)
+        task = self.provider.observe(request)
 
-        while True:
-            result = result_queue.get()
+        try:
+            while True:
+                result = task.get()
 
-            if result.type == MsgType.OK:
-                yield mpk_pb2.NotifyResponse(lines=result.content)
-            elif result.type == MsgType.FINISHED:
-                break
-            else:
-                msg = result.content
-                context.set_details(msg)
-                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-                yield mpk_pb2.NotifyResponse()
-                break
-        logging.info('Closing stream.')
-
-        # IMPORTANT:
-        # https://stackoverflow.com/questions/43948975/grpc-unary-streaming-continues-after-disconnect-blocks-on-interrupt
-        # Serious bug in Python grpcio - server doesn't notice client forceful disconnect - threads leak...
+                if result.type == MsgType.OK:
+                    yield mpk_pb2.NotifyResponse(lines=result.content)
+                elif result.type == MsgType.FINISHED:
+                    break
+                else:
+                    msg = result.content
+                    context.set_details(msg)
+                    context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                    yield mpk_pb2.NotifyResponse()
+                    break
+        finally:
+            task.cancel()
+            logging.info('Closing stream.')
 
 
 def serve():
