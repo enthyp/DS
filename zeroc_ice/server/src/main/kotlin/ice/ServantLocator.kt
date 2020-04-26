@@ -4,7 +4,8 @@ import com.zeroc.Ice.Current
 import com.zeroc.Ice.Object
 import com.zeroc.Ice.ServantLocator
 
-class Locator<T : Object>(private val availableObjects: Set<String>, private val buildBlock: () -> T) : ServantLocator {
+class Locator<T : Object>(private val availableObjects: Array<String>, private val buildBlock: () -> T) :
+    ServantLocator {
     override fun locate(curr: Current?): ServantLocator.LocateResult? {
         val id = curr?.id
         val name = id?.name

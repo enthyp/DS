@@ -3,6 +3,7 @@
 module SmartHome {
     
     module Temperature {
+
         interface Thermometer {
             float getTemperature();
         }
