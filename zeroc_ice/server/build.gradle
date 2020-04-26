@@ -19,7 +19,8 @@ dependencies {
 
 slice {
     java {
-        files = [file("../IoT.ice")]
+        srcDir = "src/main/slice"
+        include = ["${srcDir}"]
     }
 }
 
