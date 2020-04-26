@@ -21,7 +21,7 @@ fun validate(property: Property, value: Float) {
 
 open class AirConditionerI(name: String) : AirConditioner, BaseDeviceI(name) {
 
-    protected val props = mutableMapOf<Property, Float>(
+    protected val props = mutableMapOf(
         Property.TEMPERATURE to 21.0f,
         Property.POWER to 0.0f
     )

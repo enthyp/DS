@@ -13,12 +13,17 @@ val devices = mutableMapOf(
 )
 
 fun main(argv: Array<String>) {
-    Util.initialize(argv).use { comm ->
-        val adapter = comm.createObjectAdapterWithEndpoints("SmartHomeAdapter", "default -p 10000")
+    val host = "192.168.100.106"
+    val port = "10000"
 
+    Util.initialize(argv).use { comm ->
+        val adapter = comm.createObjectAdapterWithEndpoints("SmartHomeAdapter", "default -h $host -p $port")
+
+        // General info provider is always available.
         val info = InfoI(devices)
         adapter.add(info, Util.stringToIdentity("info"))
 
+        // Service locators for IoT devices.
         val tempLocator = Locator(devices["thermostats"]!!) { name -> ThermostatI(name) }
         val acLocator = Locator(devices["airConditioners"]!!) { name -> AirConditionerI(name) }
         val hacLocator = Locator(devices["humidityAirConditioners"]!!) { name -> HumidityAirConditionerI(name) }
