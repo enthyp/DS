@@ -1,0 +1,35 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.3.71'
+    id 'com.zeroc.gradle.ice-builder.slice' version '1.4.7' apply false
+}
+
+apply plugin: 'com.zeroc.gradle.ice-builder.slice'
+
+group 'ds'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation 'com.zeroc:ice:3.7.2'
+}
+
+slice {
+    java {
+        files = [file("../IoT.ice")]
+    }
+}
+
+sourceSets {
+    main.java.srcDirs += 'build/generated-src'
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
