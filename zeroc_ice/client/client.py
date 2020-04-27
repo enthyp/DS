@@ -1,6 +1,7 @@
 import Ice, sys
 import SmartHome
 from execute import *
+
 host, port = '192.168.100.106', '10000'
 
 
@@ -54,10 +55,9 @@ def parse_cmd(provider):
             else:
                 execute(state, provider)
         except Ice.Exception as e:
-            print('ERROR: ', e)
+            print('ICE ERROR: ', e)
     else:
         print(f'Incorrect command: {cmd}')
-    return
 
 
 if __name__ == '__main__':

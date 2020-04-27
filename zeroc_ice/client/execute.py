@@ -26,42 +26,44 @@ def execute(state, provider):
         print('No such device!')
         return
 
+    # Run commands for chosen device.
     while True:
         try:
             cmd = input('> cmd: ').strip()
             if cmd == 'exit':
                 break
-            if state == CmdState.TEMP:
-                exec_temp(cmd, stub)
-            elif state == CmdState.AC:
-                exec_ac(cmd, stub)
+
+            elif cmd == 'on':
+                stub.turnOn()
+            elif cmd == 'off':
+                stub.turnOff()
+            elif cmd == 'state':
+                pprint(stub.state())
+            elif cmd == 'name':
+                pprint(stub.name())
             else:
-                exec_hac(cmd, stub)
+                if state == CmdState.TEMP:
+                    exec_temp(cmd, stub)
+                elif state == CmdState.AC:
+                    exec_ac(cmd, stub)
+                else:
+                    exec_hac(cmd, stub)
+
         except SmartHome.ValueError as e:
             print(e.reason)
             print(f'Valid range: {e._from} to {e.to}')
         except SmartHome.BaseError as e:
             print(e.reason)
+        except ValueError:
+            print('A number must be provided.')
 
 
 def exec_temp(cmd, stub):
     if cmd == 'get':
         pprint(stub.getTemperature())
     elif cmd == 'set':
-        try:
-            val = float(input('> value: ').strip())
-            stub.setTemperature(val)
-        except ValueError:
-            print('A number must be provided.')
-            return
-    elif cmd == 'on':
-        stub.turnOn()
-    elif cmd == 'off':
-        stub.turnOff()
-    elif cmd == 'state':
-        pprint(stub.state())
-    elif cmd == 'name':
-        pprint(stub.name())
+        val = float(input('> value: ').strip())
+        stub.setTemperature(val)
     else:
         print('Unknown command.')
 
@@ -89,14 +91,6 @@ def exec_ac(cmd, stub):
     elif cmd == 'setConfig':
         props = parse_ac_props()
         stub.setConfig(SmartHome.AirCondition.Configuration(props))
-    elif cmd == 'state':
-        pprint(stub.state())
-    elif cmd == 'on':
-        stub.turnOn()
-    elif cmd == 'off':
-        stub.turnOff()
-    elif cmd == 'name':
-        pprint(stub.name())
     else:
         print('Unknown command.')
 
@@ -110,13 +104,5 @@ def exec_hac(cmd, stub):
         if h is not None:
             props[SmartHome.AirCondition.Property.HUMIDITY] = h
         stub.setConfig(SmartHome.AirCondition.Configuration(props))
-    elif cmd == 'state':
-        pprint(stub.state())
-    elif cmd == 'on':
-        stub.turnOn()
-    elif cmd == 'off':
-        stub.turnOff()
-    elif cmd == 'name':
-        pprint(stub.name())
     else:
         print('Unknown command.')
