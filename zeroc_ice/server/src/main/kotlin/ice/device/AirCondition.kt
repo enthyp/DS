@@ -19,7 +19,7 @@ fun validate(property: Property, value: Float) {
     }
 }
 
-open class AirConditionerI(name: String) : AirConditioner, BaseDeviceI(name) {
+open class AirConditionerI(private val name: String) : AirConditioner, BaseDeviceI(name) {
 
     protected val props = mutableMapOf(
         Property.TEMPERATURE to 21.0f,
@@ -27,18 +27,24 @@ open class AirConditionerI(name: String) : AirConditioner, BaseDeviceI(name) {
     )
 
     override fun setConfig(config: Configuration, current: Current?) {
-        // Validate and set properties
+        // Validate whole config first.
         for ((prop, value) in config.props) {
             if (prop in props) {
                 validate(prop, value)
-                props[prop] = value
             } else {
                 throw BaseError("Invalid configuration property: $prop")
             }
         }
+
+        // Set props.
+        for ((prop, value) in config.props) {
+            props[prop] = value
+            println("Set $prop = $value for $name")
+        }
     }
 
     override fun getConfig(current: Current?): Configuration {
+        println("Get config for $name")
         return Configuration(props)
     }
 }

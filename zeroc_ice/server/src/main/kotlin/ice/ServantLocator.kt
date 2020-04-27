@@ -13,9 +13,12 @@ class Locator<T : Object>(private val availableObjects: Array<String>, private v
         return if (name != null && availableObjects.contains(name)) {
             val servant = buildBlock(name)
             curr.adapter?.add(servant, id)
+            println("Located servant for $name")
+
             ServantLocator.LocateResult(servant, null)
         } else {
-            null
+            println("No servant for name $name")
+            ServantLocator.LocateResult(null, null)
         }
     }
 

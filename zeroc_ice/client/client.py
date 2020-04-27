@@ -1,16 +1,7 @@
 import Ice, sys
-from enum import Enum
-from pprint import pprint
 import SmartHome
-
+from execute import *
 host, port = '192.168.100.106', '10000'
-
-
-class CmdState(Enum):
-    INFO = 0
-    TEMP = 1
-    AC = 2
-    HAC = 3
 
 
 # Wrapper for getting stub instances.
@@ -30,7 +21,10 @@ class Provider:
         category, proxy = self.state_map[state]
         prx_str = self.proxy_string(name, category)
         obj = self.communicator.stringToProxy(prx_str)
-        return proxy.checkedCast(obj)
+        try:
+            return proxy.checkedCast(obj)
+        except Ice.ObjectNotExistException:
+            return None
 
     @staticmethod
     def proxy_string(name, category):
@@ -40,34 +34,7 @@ class Provider:
         return string
 
 
-# Actual execution.
-def exec_info(provider):
-    stub = provider.get_stub(CmdState.INFO, 'info')
-    devices = stub.getDevices()
-    print('Devices available: ')
-    pprint(devices)
-
-
-def exec_temp():
-    pass
-
-
-def exec_ac():
-    pass
-
-
-def exec_hac():
-    pass
-
-
-# Parsing related.
-
-def handle(state, provider):
-    handler_name = 'exec_' + state.name.lower()
-    handler = globals()[handler_name]
-    handler(provider)
-
-
+# Parsing.
 state_map = {
     'info': CmdState.INFO,
     'temp': CmdState.TEMP,
@@ -81,38 +48,16 @@ def parse_cmd(provider):
     state = state_map.get(cmd, None)
 
     if state:
-        handle(state, provider)
+        try:
+            if cmd == 'info':
+                exec_info(provider)
+            else:
+                execute(state, provider)
+        except Ice.Exception as e:
+            print('ERROR: ', e)
     else:
-        print(f'Incorrect command: {input}')
+        print(f'Incorrect command: {cmd}')
     return
-
-    obj_info = communicator.stringToProxy("info:default -h 192.168.100.1 -p 10000")
-    obj_t1 = communicator.stringToProxy('temp/kitchen:default -p 10000')
-    obj_t2 = communicator.stringToProxy('temp/bathroom:default -p 10000')
-
-    obj_ac = communicator.stringToProxy('ac/kitchen:default -p 10000')
-    obj_hac = communicator.stringToProxy('hac/basement:default -p 10000')
-
-    info = SmartHome.InfoPrx.checkedCast(obj_info)
-    t1 = SmartHome.Temperature.ThermostatPrx.checkedCast(obj_t1)
-    t2 = SmartHome.Temperature.ThermostatPrx.checkedCast(obj_t2)
-    ac = SmartHome.AirCondition.AirConditionerPrx.checkedCast(obj_ac)
-    hac = SmartHome.AirCondition.HumidityAirConditionerPrx.checkedCast(obj_hac)
-
-    print(info.getDevices())
-    print(t1.getTemperature())
-    t1.turnOn()
-    t1.setTemperature(20)
-    print(t1.getTemperature())
-    print(t2.getTemperature())
-    ac.turnOn()
-    hac.turnOff()
-
-    print(ac.getConfig())
-    props = {
-    }
-    ac.setConfig(SmartHome.AirCondition.Configuration(props))
-    print(ac.getConfig())
 
 
 if __name__ == '__main__':
