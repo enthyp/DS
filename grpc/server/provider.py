@@ -3,6 +3,7 @@ import random as rnd
 import threading
 import time
 from enum import Enum
+from concurrent import futures
 from queue import Queue
 from gen import mpk_pb2
 
@@ -70,8 +71,12 @@ class Task:
         return self.queue.get()
 
     def cancel(self):
-        self.future.cancel()
-        self.event.set()
+        try:
+            self.event.set()
+            self.future.cancel()
+            futures.wait([self.future], timeout=5)
+        except futures.TimeoutError:
+            logging.info('Timed out waiting for provider task to close.')
 
 
 class MpkProvider:

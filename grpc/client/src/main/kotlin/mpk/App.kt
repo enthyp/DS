@@ -10,15 +10,15 @@ import java.util.concurrent.TimeUnit
 
 
 fun main(args: Array<String>) = runBlocking {
-    val address = "localhost"
+    val address = "192.168.100.106"
     val port = 50051
     val clientId = 1
 
     Executors.newFixedThreadPool(10).asCoroutineDispatcher().use { dispatcher ->
         val channelBuilder = ManagedChannelBuilder
             .forAddress(address, port)
-            .keepAliveTime(3000, TimeUnit.MILLISECONDS)
-            .keepAliveTimeout(1000, TimeUnit.MILLISECONDS)
+            .keepAliveTime(100, TimeUnit.MILLISECONDS)  // extremely short just to show
+            .keepAliveTimeout(100, TimeUnit.MILLISECONDS)
             .usePlaintext()
             .executor(dispatcher.asExecutor())
         MpkClient(clientId, channelBuilder).use { client ->

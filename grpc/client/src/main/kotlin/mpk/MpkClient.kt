@@ -60,6 +60,7 @@ class MpkClient constructor(
                     try {
                         backoffPolicy.delay()
                         backoffPolicy.advance()
+                        displayMsg("Retrying...")
                     } catch (e: ExponentialBackoff.Timeout) {
                         displayError("server failed to deliver.")
                         break
@@ -80,6 +81,7 @@ class MpkClient constructor(
 
 // Exponential backoff state wrapper.
 class ExponentialBackoff {
+    private val factor = 1.1  // simple example so don't wait for eternity
     private var backoff = 1
     private var backoffInterval: Long = 1000
 
@@ -90,7 +92,7 @@ class ExponentialBackoff {
             backoff += 1
 
             if (backoff < 10) {
-                backoffInterval *= 2
+                backoffInterval = (backoffInterval * factor).toLong()
             }
         } else {
             throw Timeout()

@@ -37,27 +37,29 @@ class MpkPublisher(mpk_pb2_grpc.MpkPublisherServicer):
                     context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
                     yield mpk_pb2.NotifyResponse()
                     break
+                logging.info('Sent notification...')
         finally:
-            task.cancel()
             logging.info('Closing stream.')
+            task.cancel()
 
 
 def serve():
     executor = futures.ThreadPoolExecutor(max_workers=10)
     server = grpc.server(
         executor,
+        # extremely short timeouts just to show
         options=(
-            ('grpc.keepalive_time_ms', 5000),
-            # send keepalive ping every 5 sec, default is 2 hours
-            ('grpc.keepalive_timeout_ms', 1000),
-            # # keepalive ping time out after 1 sec, default is 20 sec
+            ('grpc.keepalive_time_ms', 100),
+            # send keepalive ping every 0.1 sec, default is 2 hours
+            ('grpc.keepalive_timeout_ms', 100),
+            # # keepalive ping time out after 0.1 sec, default is 20 sec
         )
     )
     mpk_provider = MpkProvider(executor)
     mpk_publisher = MpkPublisher(mpk_provider)
 
     mpk_pb2_grpc.add_MpkPublisherServicer_to_server(mpk_publisher, server)
-    server.add_insecure_port('localhost:50051')
+    server.add_insecure_port('192.168.100.106:50051')
     server.start()
 
     logging.info('Server is running...')
