@@ -1,7 +1,8 @@
 package price
 
-import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors, TimerScheduler}
+import price.persistence.PersistenceManager
 
 import scala.util.Random
 import scala.language.postfixOps
@@ -18,13 +19,18 @@ object SessionActor {
 
   def apply(product: String,
             stores: Array[String],
+            persistenceManager: ActorRef[PersistenceManager.Command],
             replyTo: ActorRef[PriceServiceManager.ReplyComparePrices]): Behavior[Command] =
     Behaviors.setup { context =>
-      for (store <- stores)
+      // Spawn price and DB lookup actors
+      val sampledStores = Random.shuffle(stores.toList).take(2).toArray
+
+      for (store <- sampledStores)
         context.spawnAnonymous(PriceLookupActor(store, product, context.self))
+      persistenceManager ! PersistenceManager.RequestHandleQuery(product, context.self)
 
       Behaviors.withTimers { timers =>
-        new SessionActor(context, product, stores, replyTo, timers)
+        new SessionActor(context, product, sampledStores, persistenceManager, replyTo, timers)
       }
     }
 }
@@ -32,6 +38,7 @@ object SessionActor {
 class SessionActor(context: ActorContext[SessionActor.Command],
                    product: String,
                    stores: Array[String],
+                   persistenceManager: ActorRef[PersistenceManager.Command],
                    replyTo: ActorRef[PriceServiceManager.ReplyComparePrices],
                    timers: TimerScheduler[SessionActor.Command])
   extends AbstractBehavior[SessionActor.Command](context) {
@@ -41,20 +48,20 @@ class SessionActor(context: ActorContext[SessionActor.Command],
   // TODO: affected by lifecycle?
   timers.startSingleTimer(TimedOut(), TimedOut(), const.ComparePricesTimeout)
 
-  private var sampledStores = Random.shuffle(stores.toList).take(2)
-  private var pending: Set[String] = sampledStores.toSet
+  private var pending: Set[String] = stores.toSet
   private var replies: Map[String, Option[PriceEntry]] = Map.empty
+  private var requestCount: Option[Int] = None
 
   override def onMessage(msg: Command): Behavior[Command] = awaiting()
 
   private def awaiting(): Behavior[Command] = Behaviors.receiveMessage { msg =>
+    context.log.info(s"Session recv $msg")
     msg match {
       case PriceLookupResponse(price, store) => onPriceLookupResponse(price, store)
-      case DatabaseLookupResponse(count, product) =>
+      case DatabaseLookupResponse(count, product) => onDBLookupResponse(count, product)
       case TimedOut() => collect()
-
     }
-    Behaviors.same
+    Behaviors.stopped
   }
 
   private def onPriceLookupResponse(price: Int, store: String): Behavior[Command] = {
@@ -63,6 +70,16 @@ class SessionActor(context: ActorContext[SessionActor.Command],
       replies += store -> Option(PriceEntry(price, store))
     }
 
+    if (pending.isEmpty && requestCount.isDefined)
+      collect()
+    else
+      Behaviors.same
+  }
+
+  private def onDBLookupResponse(count: Int, product: String): Behavior[Command] = {
+    if (product == this.product && requestCount.isEmpty) {
+      requestCount = Option(count)
+    }
     if (pending isEmpty)
       collect()
     else
@@ -73,8 +90,8 @@ class SessionActor(context: ActorContext[SessionActor.Command],
     for (store <- pending)
       replies += store -> None
 
-    val reply1 = replies(sampledStores(0))
-    val reply2 = replies(sampledStores(1))
+    val reply1 = replies(stores(0))
+    val reply2 = replies(stores(1))
 
     val price: Option[PriceEntry] = (reply1, reply2) match {
       case (Some(entry1), Some(entry2)) =>
@@ -86,8 +103,13 @@ class SessionActor(context: ActorContext[SessionActor.Command],
       case _ => reply2
     }
 
-    // TODO: DB also
-    replyTo ! PriceServiceManager.ReplyComparePrices(product, price, Option(1))
+    replyTo ! PriceServiceManager.ReplyComparePrices(product, price, requestCount)
     Behaviors.stopped
+  }
+
+  override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
+    case PostStop =>
+      context.log.info(s"Stopped")
+      this
   }
 }
