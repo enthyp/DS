@@ -1,4 +1,5 @@
 import scala.language.postfixOps
+import scala.util.control.Breaks._
 import SimulationSupervisor.Command
 import akka.actor.typed.{ActorSystem, Behavior, PostStop, Signal}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
@@ -22,7 +23,7 @@ class SimulationSupervisor(context: ActorContext[Command], numClients: Int, stor
 
   import SimulationSupervisor._
 
-  private val priceServiceManager = context.spawn(PriceServiceManager(), "price-service-manager")
+  private val priceServiceManager = context.spawn(PriceServiceManager(stores), "price-service-manager")
 
   private val clients = (0 to numClients) map { id =>
     context.spawn(ClientActor(id, priceServiceManager), s"client-$id")
@@ -36,8 +37,7 @@ class SimulationSupervisor(context: ActorContext[Command], numClients: Int, stor
         println(s"No such client: $id")
       this
     case Die() =>
-      context.stop(context.self)
-      this
+      Behaviors.stopped
   }
 
   override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
@@ -53,12 +53,21 @@ object Simulation {
     val stores = Array("7-11", "Żabka", "Lewiatan")
     val system = ActorSystem(SimulationSupervisor(numClients, stores), "simulation")
 
-    for (line <- io.Source.stdin.getLines()) {
-      try {
-        val Array(clientId, productName) = line split (":") map (_.trim())
-        system ! SimulationSupervisor.RequestComparePrices(clientId toInt, productName)
-      } catch {
-        case e: Exception => e.printStackTrace()
+    breakable {
+      for (line <- io.Source.stdin.getLines()) {
+        try {
+          if (line == "q") {
+            system ! SimulationSupervisor.Die()
+            break
+          }
+
+          val Array(clientId, productName) = line split (":") map (_.trim())
+          system ! SimulationSupervisor.RequestComparePrices(clientId toInt, productName)
+        } catch {
+          case _: MatchError => println("Incorrect input!")
+          case e: Exception =>
+            e.printStackTrace()
+        }
       }
     }
   }

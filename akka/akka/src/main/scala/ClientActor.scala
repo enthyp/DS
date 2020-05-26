@@ -1,6 +1,6 @@
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import price.PriceServiceManager
+import price.{PriceEntry, PriceServiceManager}
 
 object ClientActor {
 
@@ -20,14 +20,13 @@ object ClientActor {
           serviceManager ! PriceServiceManager.RequestComparePrices(product, serviceResponseMapper)
           Behaviors.same
         case WrappedReplyComparePrices(response) =>
-          response.price1 match {
-            case Some(price) => println(s"${response.product} in store 1: $price")
-            case None => println(s"${response.product} in store 1: N/A")
+          response.priceEntry match {
+            case Some(PriceEntry(price, store)) =>
+              println(s"${response.product} best price: $price in store ${store}")
+            case None =>
+              println(s"Failed to get any results for ${response.product}")
           }
-          response.price2 match {
-            case Some(price) => println(s"${response.product} in store 2: $price")
-            case None => println(s"${response.product} in store 2: N/A")
-          }
+
           response.requestCount match {
             case Some(count) => println(s"${response.product} requests so far: $count")
             case None => println(s"${response.product} requests so far: N/A")
