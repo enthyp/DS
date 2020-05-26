@@ -1,0 +1,5 @@
+package price
+
+object SessionActor {
+
+}
