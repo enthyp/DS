@@ -28,7 +28,6 @@ object RequestsDAO {
             ON CONFLICT (query)
             DO UPDATE SET count = requests.count + 1
         """
-    dbSession.db.run(query)
-    Future.successful(Done)
+    dbSession.db.run(query).map(_ => Done)
   }
 }

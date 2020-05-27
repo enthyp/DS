@@ -23,7 +23,6 @@ object SessionActor {
             persistenceManager: ActorRef[PersistenceManager.RequestHandleQuery],
             replyTo: ActorRef[PriceServiceManager.ReplyComparePrices]): Behavior[Command] =
     Behaviors.setup { context =>
-      // Spawn price and DB lookup actors
       val sampledStores = Random.shuffle(stores.toList).take(2).toArray
 
       for (store <- sampledStores)

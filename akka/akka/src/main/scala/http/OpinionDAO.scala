@@ -2,10 +2,9 @@ package http
 
 import akka.actor.typed.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse}
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.stream.Materializer
 import org.jsoup.Jsoup
-import org.jsoup.nodes.Element
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
