@@ -2,70 +2,53 @@ package price.persistence
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
-import akka.stream.Materializer
-import akka.stream.alpakka.slick.scaladsl.{Slick, SlickSession}
-import akka.stream.scaladsl.Sink
+import akka.stream.alpakka.slick.scaladsl.SlickSession
 import price.SessionActor
-import slick.jdbc.PostgresProfile.api._
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
-
 
 object Worker {
 
-  sealed trait Event
+  sealed trait Command
 
-  private final case class GotCount(count: Int) extends Event
+  private final case class GotCount(count: Int)
+    extends Command
 
-  private final case class Done() extends Event
+  private final case class Done() extends Command
 
-  def apply(product: String,
-            replyTo: ActorRef[SessionActor.DatabaseLookupResponse],
-            dbSession: SlickSession): Behavior[Event] =
+  def apply(product: String, dbSession: SlickSession, replyTo: ActorRef[SessionActor.Command]): Behavior[Command] =
     Behaviors.setup { context =>
-      val materializer: Materializer = Materializer(context)
-      implicit val ec: ExecutionContextExecutor = context.executionContext
+      replyTo ! SessionActor.DatabaseLookupResponse(1, "CHUJ")
 
-      val count: Future[Int] = lookup(product)(dbSession, materializer)
-      context.pipeToSelf(count) {
-        case Success(value) =>
-          GotCount(value)
-        case Failure(exception) =>
+      implicit val ec: ExecutionContext = context.executionContext
+
+      val count: Future[Int] = RequestsDAO.lookup (product, dbSession)
+      context.pipeToSelf (count) {
+        case Success (value) =>
+          GotCount (value)
+        case Failure (exception) =>
           exception match {
-            case _: NoSuchElementException => GotCount(0)
+            case _: NoSuchElementException => GotCount (0)
             case e: Exception =>
-              context.log.error(s"Lookup failed with: ${e.getMessage} ${e.toString}")
-              Done()
+              context.log.error (s"Lookup failed with: ${
+                e.getMessage
+              } ${
+                e.toString
+              }")
+              Done ()
           }
       }
 
-      receive(product, replyTo)
-    }
-
-  private def receive(product: String,
-                      replyTo: ActorRef[SessionActor.DatabaseLookupResponse]): Behavior[Event] =
-    Behaviors.receive { (context, msg) =>
-      msg match {
-        case GotCount(count) =>
-          replyTo ! SessionActor.DatabaseLookupResponse(count, product)
-          context.log.info(s"Responded with $count to ${replyTo.path}")
-
-          val inc: Future[Unit] = increment(product)
-          context.pipeToSelf(inc) { _ => Done() }
-          Behaviors.same
-        case Done() =>
-          Behaviors.stopped
+      Behaviors.receive { (context, msg) =>
+        msg match {
+          case GotCount(count) =>
+            replyTo ! SessionActor.DatabaseLookupResponse(count, product)
+            context.log.info(s"Responded with $count to ${replyTo.path}")
+            Behaviors.same
+          case Done() =>
+            Behaviors.stopped
+        }
       }
     }
-
-  private def lookup(product: String)(implicit session: SlickSession, materializer: Materializer): Future[Int] = {
-    Slick
-      .source(TableQuery[Requests].filter(_.query === product).map(_.count).result)
-      .runWith(Sink.last)
-  }
-
-  private def increment(product: String): Future[Unit] = {
-    Future.successful()
-  }
 }

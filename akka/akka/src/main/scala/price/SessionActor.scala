@@ -2,10 +2,11 @@ package price
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors, TimerScheduler}
-import price.persistence.PersistenceManager
+import akka.stream.alpakka.slick.scaladsl.SlickSession
+import price.persistence.Worker
 
-import scala.util.Random
 import scala.language.postfixOps
+import scala.util.Random
 
 object SessionActor {
 
@@ -19,7 +20,7 @@ object SessionActor {
 
   def apply(product: String,
             stores: Array[String],
-            persistenceManager: ActorRef[PersistenceManager.Command],
+            dbSession: SlickSession,
             replyTo: ActorRef[PriceServiceManager.ReplyComparePrices]): Behavior[Command] =
     Behaviors.setup { context =>
       // Spawn price and DB lookup actors
@@ -27,10 +28,11 @@ object SessionActor {
 
       for (store <- sampledStores)
         context.spawnAnonymous(PriceLookupActor(store, product, context.self))
-      persistenceManager ! PersistenceManager.RequestHandleQuery(product, context.self)
+
+      context.spawnAnonymous(Worker(product, dbSession, context.self))
 
       Behaviors.withTimers { timers =>
-        new SessionActor(context, product, sampledStores, persistenceManager, replyTo, timers)
+        new SessionActor(context, product, sampledStores, replyTo, timers)
       }
     }
 }
@@ -38,7 +40,6 @@ object SessionActor {
 class SessionActor(context: ActorContext[SessionActor.Command],
                    product: String,
                    stores: Array[String],
-                   persistenceManager: ActorRef[PersistenceManager.Command],
                    replyTo: ActorRef[PriceServiceManager.ReplyComparePrices],
                    timers: TimerScheduler[SessionActor.Command])
   extends AbstractBehavior[SessionActor.Command](context) {
@@ -53,14 +54,14 @@ class SessionActor(context: ActorContext[SessionActor.Command],
   private var requestCount: Option[Int] = None
 
   override def onMessage(msg: Command): Behavior[Command] =
-      Behaviors.receiveMessage { msg =>
-        context.log.info(s"recv $msg")
-        msg match {
-          case PriceLookupResponse(price, store) => onPriceLookupResponse(price, store)
-          case DatabaseLookupResponse(count, product) => onDBLookupResponse(count, product)
-          case TimedOut() => collect()
-        }
+    Behaviors.receive { (context, msg) =>
+      context.log.info(s"recv $msg")
+      msg match {
+        case PriceLookupResponse(price, store) => onPriceLookupResponse(price, store)
+        case DatabaseLookupResponse(count, product) => onDBLookupResponse(count, product)
+        case TimedOut() => collect()
       }
+    }
 
 
   private def onPriceLookupResponse(price: Int, store: String): Behavior[Command] = {

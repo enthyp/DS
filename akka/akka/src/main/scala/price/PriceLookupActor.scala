@@ -13,7 +13,7 @@ object PriceLookupActor {
 
   private final case class LookedUp() extends Command
 
-  def apply(store: String, product: String, replyTo: ActorRef[SessionActor.PriceLookupResponse]): Behavior[Command] =
+  def apply(store: String, product: String, replyTo: ActorRef[SessionActor.Command]): Behavior[Command] =
     Behaviors.withTimers { timers =>
       val lookupTime =
         const.PriceLookupTimeLower + Random.nextInt(const.PriceLookupTimeUpper - const.PriceLookupTimeLower + 1)
@@ -25,4 +25,5 @@ object PriceLookupActor {
         Behaviors.stopped
       }
     }
+
 }
