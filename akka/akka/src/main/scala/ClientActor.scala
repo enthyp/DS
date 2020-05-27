@@ -22,14 +22,14 @@ object ClientActor {
         case WrappedReplyComparePrices(response) =>
           response.priceEntry match {
             case Some(PriceEntry(price, store)) =>
-              context.log.info(s"${response.product} best price: $price in store ${store}")
+              println(s"${response.product} best price: $price in store ${store}")
             case None =>
-              context.log.info(s"Failed to get any results for ${response.product}")
+              println(s"Failed to get any results for ${response.product}")
           }
 
           response.requestCount match {
-            case Some(count) => context.log.info(s"${response.product} requests so far: $count")
-            case None => context.log.info(s"${response.product} requests so far: N/A")
+            case Some(count) => println(s"${response.product} requests so far: $count")
+            case None => println(s"${response.product} requests so far: N/A")
           }
 
           Behaviors.same

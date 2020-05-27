@@ -1,6 +1,6 @@
 package price
 
-import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
+import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors, TimerScheduler}
 import price.persistence.PersistenceManager
 
@@ -52,17 +52,16 @@ class SessionActor(context: ActorContext[SessionActor.Command],
   private var replies: Map[String, Option[PriceEntry]] = Map.empty
   private var requestCount: Option[Int] = None
 
-  override def onMessage(msg: Command): Behavior[Command] = awaiting()
+  override def onMessage(msg: Command): Behavior[Command] =
+      Behaviors.receiveMessage { msg =>
+        context.log.info(s"recv $msg")
+        msg match {
+          case PriceLookupResponse(price, store) => onPriceLookupResponse(price, store)
+          case DatabaseLookupResponse(count, product) => onDBLookupResponse(count, product)
+          case TimedOut() => collect()
+        }
+      }
 
-  private def awaiting(): Behavior[Command] = Behaviors.receiveMessage { msg =>
-    context.log.info(s"Session recv $msg")
-    msg match {
-      case PriceLookupResponse(price, store) => onPriceLookupResponse(price, store)
-      case DatabaseLookupResponse(count, product) => onDBLookupResponse(count, product)
-      case TimedOut() => collect()
-    }
-    Behaviors.stopped
-  }
 
   private def onPriceLookupResponse(price: Int, store: String): Behavior[Command] = {
     if (pending contains store) {
@@ -105,11 +104,5 @@ class SessionActor(context: ActorContext[SessionActor.Command],
 
     replyTo ! PriceServiceManager.ReplyComparePrices(product, price, requestCount)
     Behaviors.stopped
-  }
-
-  override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
-    case PostStop =>
-      context.log.info(s"Stopped")
-      this
   }
 }

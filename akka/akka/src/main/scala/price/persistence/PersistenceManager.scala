@@ -21,19 +21,15 @@ object PersistenceManager {
       Behaviors.receive { (context, msg) =>
         msg match {
           case RequestHandleQuery(product, replyTo) =>
-            // TODO: keep reference to the child?
             context.spawnAnonymous(Worker(product, replyTo, dbSession))
         }
         Behaviors.same
-    }
-
+      }
     }
 
   private def setupDB(dbSession: SlickSession): Unit = {
     // Create counting table if necessary
     val requests = TableQuery[Requests]
-
     dbSession.db.run(requests.schema.createIfNotExists)
-    dbSession.db.run(requests += ("mleko", 10))
   }
 }

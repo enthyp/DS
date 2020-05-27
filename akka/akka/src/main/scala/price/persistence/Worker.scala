@@ -29,12 +29,13 @@ object Worker {
 
       val count: Future[Int] = lookup(product)(dbSession, materializer)
       context.pipeToSelf(count) {
-        case Success(value) => GotCount(value)
+        case Success(value) =>
+          GotCount(value)
         case Failure(exception) =>
           exception match {
             case _: NoSuchElementException => GotCount(0)
             case e: Exception =>
-              context.log.error(s"Increment failed with: ${e.getMessage} ${e.toString}")
+              context.log.error(s"Lookup failed with: ${e.getMessage} ${e.toString}")
               Done()
           }
       }
@@ -48,8 +49,10 @@ object Worker {
       msg match {
         case GotCount(count) =>
           replyTo ! SessionActor.DatabaseLookupResponse(count, product)
+          context.log.info(s"Responded with $count to ${replyTo.path}")
+
           val inc: Future[Unit] = increment(product)
-          context.pipeToSelf(inc) { _ => Done()}
+          context.pipeToSelf(inc) { _ => Done() }
           Behaviors.same
         case Done() =>
           Behaviors.stopped
@@ -57,10 +60,9 @@ object Worker {
     }
 
   private def lookup(product: String)(implicit session: SlickSession, materializer: Materializer): Future[Int] = {
-    val count: Future[Int] = Slick
+    Slick
       .source(TableQuery[Requests].filter(_.query === product).map(_.count).result)
       .runWith(Sink.last)
-    count
   }
 
   private def increment(product: String): Future[Unit] = {

@@ -2,6 +2,7 @@ package price
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
+import akka.stream.alpakka.slick.scaladsl.SlickSession
 import price.persistence.PersistenceManager
 
 final case class PriceEntry(price: Int, store: String)
