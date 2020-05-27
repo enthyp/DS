@@ -28,11 +28,10 @@ object SessionActor {
 
       for (store <- sampledStores)
         context.spawnAnonymous(PriceLookupActor(store, product, context.self))
-
       context.spawnAnonymous(Worker(product, dbSession, context.self))
 
       Behaviors.withTimers { timers =>
-        new SessionActor(context, product, sampledStores, replyTo, timers)
+        new SessionActor(context, product, sampledStores, dbSession, replyTo, timers)
       }
     }
 }
@@ -40,6 +39,7 @@ object SessionActor {
 class SessionActor(context: ActorContext[SessionActor.Command],
                    product: String,
                    stores: Array[String],
+                   dbSession: SlickSession,
                    replyTo: ActorRef[PriceServiceManager.ReplyComparePrices],
                    timers: TimerScheduler[SessionActor.Command])
   extends AbstractBehavior[SessionActor.Command](context) {
@@ -53,16 +53,13 @@ class SessionActor(context: ActorContext[SessionActor.Command],
   private var replies: Map[String, Option[PriceEntry]] = Map.empty
   private var requestCount: Option[Int] = None
 
-  override def onMessage(msg: Command): Behavior[Command] =
-    Behaviors.receive { (context, msg) =>
-      context.log.info(s"recv $msg")
-      msg match {
-        case PriceLookupResponse(price, store) => onPriceLookupResponse(price, store)
-        case DatabaseLookupResponse(count, product) => onDBLookupResponse(count, product)
-        case TimedOut() => collect()
-      }
+  override def onMessage(msg: Command): Behavior[Command] = {
+    msg match {
+      case PriceLookupResponse(price, store) => onPriceLookupResponse(price, store)
+      case DatabaseLookupResponse(count, product) => onDBLookupResponse(count, product)
+      case TimedOut() => collect()
     }
-
+  }
 
   private def onPriceLookupResponse(price: Int, store: String): Behavior[Command] = {
     if (pending contains store) {
@@ -73,7 +70,7 @@ class SessionActor(context: ActorContext[SessionActor.Command],
     if (pending.isEmpty && requestCount.isDefined)
       collect()
     else
-      Behaviors.same
+      this
   }
 
   private def onDBLookupResponse(count: Int, product: String): Behavior[Command] = {
@@ -83,7 +80,7 @@ class SessionActor(context: ActorContext[SessionActor.Command],
     if (pending isEmpty)
       collect()
     else
-      Behaviors.same
+      this
   }
 
   private def collect(): Behavior[Command] = {
