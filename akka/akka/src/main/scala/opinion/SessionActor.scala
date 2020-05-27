@@ -1,5 +1,0 @@
-package opinion
-
-object SessionActor {
-
-}

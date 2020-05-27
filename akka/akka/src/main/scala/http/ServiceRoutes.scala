@@ -20,7 +20,11 @@ class ServiceRoutes(priceServiceManager: ActorRef[PriceServiceManager.Request])(
   def comparePrices(product: String): Future[ReplyComparePrices] =
     priceServiceManager.ask(ref => RequestComparePrices(product, ref))
 
+  def checkOpinion(product: String): Future[String] =
+    OpinionDAO.checkOpinion(product)
+
   val serviceRoutes: Route =
+    concat(
     pathPrefix("price") {
       path(Segment) { product =>
         get {
@@ -29,5 +33,15 @@ class ServiceRoutes(priceServiceManager: ActorRef[PriceServiceManager.Request])(
           }
         }
       }
-    }
+    },
+      pathPrefix("review") {
+        path(Segment) { product =>
+          get {
+            onSuccess(checkOpinion(product)) { response =>
+              complete(response)
+            }
+          }
+        }
+      }
+    )
 }
