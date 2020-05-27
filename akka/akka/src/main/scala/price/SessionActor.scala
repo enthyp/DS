@@ -2,8 +2,7 @@ package price
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors, TimerScheduler}
-import akka.stream.alpakka.slick.scaladsl.SlickSession
-import price.persistence.Worker
+import price.persistence.PersistenceManager
 
 import scala.language.postfixOps
 import scala.util.Random
@@ -20,7 +19,7 @@ object SessionActor {
 
   def apply(product: String,
             stores: Array[String],
-            dbSession: SlickSession,
+            persistenceManager: ActorRef[PersistenceManager.RequestHandleQuery],
             replyTo: ActorRef[PriceServiceManager.ReplyComparePrices]): Behavior[Command] =
     Behaviors.setup { context =>
       // Spawn price and DB lookup actors
@@ -28,10 +27,10 @@ object SessionActor {
 
       for (store <- sampledStores)
         context.spawnAnonymous(PriceLookupActor(store, product, context.self))
-      context.spawnAnonymous(Worker(product, dbSession, context.self))
+      persistenceManager ! PersistenceManager.RequestHandleQuery(product, context.self)
 
       Behaviors.withTimers { timers =>
-        new SessionActor(context, product, sampledStores, dbSession, replyTo, timers)
+        new SessionActor(context, product, sampledStores, replyTo, timers)
       }
     }
 }
@@ -39,7 +38,6 @@ object SessionActor {
 class SessionActor(context: ActorContext[SessionActor.Command],
                    product: String,
                    stores: Array[String],
-                   dbSession: SlickSession,
                    replyTo: ActorRef[PriceServiceManager.ReplyComparePrices],
                    timers: TimerScheduler[SessionActor.Command])
   extends AbstractBehavior[SessionActor.Command](context) {

@@ -9,7 +9,7 @@ import price.SessionActor
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-object Worker {
+object PersistenceWorker {
 
   sealed trait Command
 
@@ -18,7 +18,7 @@ object Worker {
 
   final case class Finished() extends Command
 
-  def apply(product: String, dbSession: SlickSession, replyTo: ActorRef[SessionActor.Command]): Behavior[Command] =
+  def apply(product: String, dbSession: SlickSession, replyTo: ActorRef[SessionActor.DatabaseLookupResponse]): Behavior[Command] =
     Behaviors.setup { context =>
       implicit val ec: ExecutionContext = context.executionContext
 

@@ -5,7 +5,7 @@ import akka.actor.typed.{ActorSystem, Behavior, PostStop, Signal}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.stream.alpakka.slick.scaladsl.SlickSession
 import price.PriceServiceManager
-import price.persistence.Requests
+import price.persistence.{PersistenceManager, Requests}
 import slick.basic.DatabaseConfig
 import slick.jdbc.JdbcProfile
 import slick.jdbc.PostgresProfile.api._
@@ -33,8 +33,11 @@ class SimulationSupervisor(context: ActorContext[Command],
 
   import SimulationSupervisor._
 
+  private val persistenceManager =
+    context.spawn(PersistenceManager(dbSession), "persistence-manager")
+
   private val priceServiceManager =
-    context.spawn(PriceServiceManager(stores, dbSession), "price-service-manager")
+    context.spawn(PriceServiceManager(stores, persistenceManager), "price-service-manager")
 
   private val clients = (0 to numClients) map { id =>
     context.spawn(ClientActor(id, priceServiceManager), s"client-$id")
