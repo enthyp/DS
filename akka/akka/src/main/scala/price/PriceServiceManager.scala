@@ -1,10 +1,9 @@
 package price
 
-import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.scaladsl.Behaviors
 import price.persistence.PersistenceManager
-
-final case class PriceEntry(price: Int, store: String)
+import price.session.{PriceEntry, SessionManager}
 
 object PriceServiceManager {
 
@@ -14,11 +13,18 @@ object PriceServiceManager {
 
   final case class ReplyComparePrices(product: String, priceEntry: Option[PriceEntry], requestCount: Option[Int])
 
-  def apply(stores: Array[String], persistenceManager: ActorRef[PersistenceManager.RequestHandleQuery]): Behavior[Request] =
-    Behaviors.receive { (context, msg) =>
-      msg match {
+  def apply(stores: Array[String]): Behavior[Request] =
+    Behaviors.setup { context =>
+
+      val persistenceManager =
+        context.spawn(PersistenceManager(), "persistence-manager")
+
+      val sessionManager =
+        context.spawn(SessionManager(stores, persistenceManager), "price-service-manager")
+
+      Behaviors.receiveMessage {
         case RequestComparePrices(product, replyTo) =>
-          context.spawnAnonymous(SessionActor(product, stores, persistenceManager, replyTo))
+          sessionManager ! SessionManager.RequestComparePrices(product, replyTo)
           Behaviors.same
       }
     }

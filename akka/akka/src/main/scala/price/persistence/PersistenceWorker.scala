@@ -4,7 +4,7 @@ import akka.Done
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.stream.alpakka.slick.scaladsl.SlickSession
-import price.SessionActor
+import price.session.SessionActor
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}

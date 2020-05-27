@@ -1,7 +1,7 @@
-package price
+package price.session
 
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorRef, Behavior}
 
 import scala.util.Random
 import scala.concurrent.duration._

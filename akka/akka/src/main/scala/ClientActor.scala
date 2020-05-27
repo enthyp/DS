@@ -1,6 +1,7 @@
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import price.{PriceEntry, PriceServiceManager}
+import price.PriceServiceManager
+import price.session.PriceEntry
 
 object ClientActor {
 

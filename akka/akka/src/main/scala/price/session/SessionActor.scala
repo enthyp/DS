@@ -1,8 +1,9 @@
-package price
+package price.session
 
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors, TimerScheduler}
+import akka.actor.typed.{ActorRef, Behavior}
 import price.persistence.PersistenceManager
+import price.PriceServiceManager
 
 import scala.language.postfixOps
 import scala.util.Random
