@@ -5,8 +5,6 @@ import akka.actor.typed.{ActorRef, Behavior}
 import price.PriceServiceManager
 import price.persistence.PersistenceManager
 
-final case class PriceEntry(price: Int, store: String)
-
 object SessionManager {
 
   sealed trait Request

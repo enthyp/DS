@@ -3,7 +3,9 @@ package price
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import price.persistence.PersistenceManager
-import price.session.{PriceEntry, SessionManager}
+import price.session.SessionManager
+
+final case class PriceEntry(price: Int, store: String)
 
 object PriceServiceManager {
 
