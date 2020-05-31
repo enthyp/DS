@@ -4,16 +4,15 @@ import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.Directives._
-import price.PriceServiceManager
+import price.{PriceEntry, PriceServiceManager}
 import price.PriceServiceManager.{ReplyComparePrices, RequestComparePrices}
 
 import scala.concurrent.Future
 import akka.util.Timeout
 
-class ServiceRoutes(priceServiceManager: ActorRef[PriceServiceManager.Request])(implicit val system: ActorSystem[_]) {
+import scala.util.{Failure, Success}
 
-  import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-  import JsonFormats._
+class ServiceRoutes(priceServiceManager: ActorRef[PriceServiceManager.Request])(implicit val system: ActorSystem[_]) {
 
   private implicit val timeout: Timeout = const.HttpTimeout
 
@@ -29,7 +28,19 @@ class ServiceRoutes(priceServiceManager: ActorRef[PriceServiceManager.Request])(
       path(Segment) { product =>
         get {
           onSuccess(comparePrices(product)) { response =>
-            complete(response)
+            val responseStr: String = response.priceEntry match {
+              case Some(PriceEntry(price, store)) =>
+                s"${response.product} best price: $price in store ${store}\n"
+              case None =>
+                s"Failed to get any results for ${response.product}\n"
+            }
+
+            response.requestCount match {
+              case Some(count) =>
+                complete(responseStr + s"${response.product} requests so far: $count")
+              case None =>
+                complete(responseStr + s"${response.product} requests so far: N/A")
+            }
           }
         }
       }
@@ -37,8 +48,9 @@ class ServiceRoutes(priceServiceManager: ActorRef[PriceServiceManager.Request])(
       pathPrefix("review") {
         path(Segment) { product =>
           get {
-            onSuccess(checkOpinion(product)) { response =>
-              complete(response)
+            onComplete(checkOpinion(product)) {
+              case Success(response) => complete(response)
+              case Failure(_) => complete(s"Failed to fetch opinion about $product")
             }
           }
         }
